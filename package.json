@@ -4,8 +4,11 @@
   "version": "0.1.0",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev:web": "npm run dev --workspace=@tacos/web",
-    "dev:api": "npm run start:dev --workspace=@tacos/api",
+    "dev": "npm run frontend",
+    "start": "npm run frontend:start",
+    "frontend": "npm run dev --workspace=@tacos/frontend",
+    "frontend:start": "npm run start --workspace=@tacos/frontend",
+    "backend": "npm run start:dev --workspace=@tacos/backend",
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces"
   },
