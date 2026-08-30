@@ -1,0 +1,13 @@
+{
+  "name": "tacos-platform",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=@tacos/web",
+    "dev:api": "npm run start:dev --workspace=@tacos/api",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces"
+  },
+  "engines": { "node": ">=22" }
+}
