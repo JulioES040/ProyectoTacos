@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { DatabaseModule } from './database/database.module';
+import { HealthController } from './health.controller';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { CashRegisterModule } from './modules/cash-register/cash-register.module';
 import { KitchenModule } from './modules/kitchen/kitchen.module';
@@ -11,9 +11,9 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
 
 @Module({
+  controllers: [HealthController],
   imports: [
     EventEmitterModule.forRoot(),
-    DatabaseModule,
     ProductsModule,
     CategoriesModule,
     OrdersModule,

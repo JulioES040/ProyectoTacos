@@ -7,7 +7,7 @@ import {
   FiPackage as PackageCheck,
   FiX as X,
 } from 'react-icons/fi';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   deliverKitchenOrder,
   KitchenOrder,
@@ -26,17 +26,20 @@ export function ReadyOrdersPanel() {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const readyOrders = orders.filter((order) => order.status === 'READY');
 
+  const refresh = useCallback(async () => {
+    try { setOrders(await readKitchenOrders()); } catch { setOrders([]); }
+  }, []);
+
   useEffect(() => {
-    const refresh = () => setOrders(readKitchenOrders());
     setNow(Date.now());
-    refresh();
-    const unsubscribe = subscribeToKitchenOrders(refresh);
+    void refresh();
+    const unsubscribe = subscribeToKitchenOrders(() => void refresh());
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => {
       unsubscribe();
       window.clearInterval(timer);
     };
-  }, []);
+  }, [refresh]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -63,7 +66,7 @@ export function ReadyOrdersPanel() {
             <div className="ready-order-heading"><div><span>Orden</span><strong>#{order.orderNumber}</strong></div><span><Clock3 size={16} /> {minutesSince(order.createdAt, now)} min</span></div>
             <h3>{order.customer}</h3>
             <ul>{order.lines.map((line) => <li key={line.id}><strong>{line.quantity}x</strong> {line.name}</li>)}</ul>
-            <button type="button" onClick={() => deliverKitchenOrder(order.publicToken)}><PackageCheck size={20} /> Marcar como entregada</button>
+            <button type="button" onClick={() => void deliverKitchenOrder(order.id)}><PackageCheck size={20} /> Marcar como entregada</button>
           </article>)}
           {readyOrders.length === 0 && <div className="ready-orders-empty"><CheckCheck size={32} /><strong>Sin entregas pendientes</strong><p>Las ordenes apareceran aqui cuando cocina las marque como listas.</p></div>}
         </div>

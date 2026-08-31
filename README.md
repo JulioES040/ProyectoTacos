@@ -13,5 +13,13 @@ Monorepo para POS, cocina, seguimiento de pedidos y reportes.
 
 1. Copia `.env.example` a `.env`.
 2. Instala dependencias con `npm install`.
-3. Inicia PostgreSQL con `docker compose up -d postgres`.
-4. Ejecuta `npm run frontend` y `npm run backend` en terminales separadas.
+3. Ejecuta `npm run backend` en una terminal.
+4. Ejecuta `npm run frontend` en otra terminal.
+
+El backend usa almacenamiento en memoria en esta etapa. No requiere base de datos y las ordenes se eliminan al reiniciar el proceso.
+
+- Frontend: `http://localhost:3103` (o el puerto que indique Next.js).
+- Control de menu: `http://localhost:3103/menu`.
+- API: `http://localhost:3001/api`.
+- Swagger: `http://localhost:3001/docs`.
+- Documentacion tecnica: [`docs/backend-api.md`](docs/backend-api.md).

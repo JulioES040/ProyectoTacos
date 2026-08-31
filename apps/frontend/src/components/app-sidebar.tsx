@@ -1,6 +1,6 @@
 'use client';
 
-import { FiBarChart2 as BarChart3, FiShoppingCart as ShoppingCart, FiZap as Flame } from 'react-icons/fi';
+import { FiBarChart2 as BarChart3, FiBookOpen as BookOpen, FiShoppingCart as ShoppingCart, FiZap as Flame } from 'react-icons/fi';
 import { MdKitchen as ChefHat } from 'react-icons/md';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 const navigation = [
   { href: '/pos', label: 'POS', description: 'Punto de venta', icon: ShoppingCart },
   { href: '/kitchen', label: 'Cocina', description: 'Panel de cocina', icon: ChefHat },
+  { href: '/menu', label: 'Menu', description: 'Control de menu', icon: BookOpen },
   { href: '/reports', label: 'Reportes', description: 'Reportes', icon: BarChart3 },
 ];
 
