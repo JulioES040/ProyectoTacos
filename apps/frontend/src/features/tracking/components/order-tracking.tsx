@@ -1,6 +1,7 @@
 'use client';
 
 import { FiBell, FiCheck, FiCheckCircle, FiClock, FiCoffee, FiPackage, FiShoppingBag, FiVolume2, FiVolumeX, FiXCircle, FiZap } from 'react-icons/fi';
+import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   KitchenOrderStatus,
@@ -116,14 +117,14 @@ export function OrderTracking({ token }: OrderTrackingProps) {
 
   if (!order || !content) {
     return <main className="tracking-shell">
-      <header className="tracking-brand"><span><FiZap size={24} /></span><div><strong>El Taquero</strong><small>Seguimiento de pedido</small></div></header>
+      <header className="tracking-brand"><span><Image src="/brands/el-buen-taco-logo.png" alt="" width={44} height={44} priority /></span><div><strong>El Buen Taco</strong><small>Seguimiento de pedido</small></div></header>
       <section className="tracking-not-found"><FiXCircle size={48} /><h1>No encontramos esta orden</h1><p>Verifica que el codigo QR corresponda a tu ticket o solicita ayuda en caja.</p><code>{token}</code></section>
     </main>;
   }
 
   return (
     <main className={`tracking-shell tracking-${order.status.toLowerCase()}`}>
-      <header className="tracking-brand"><span><FiZap size={24} /></span><div><strong>El Taquero</strong><small>Seguimiento de pedido</small></div><span className="tracking-live"><i /> En vivo</span></header>
+      <header className="tracking-brand"><span><Image src="/brands/el-buen-taco-logo.png" alt="" width={44} height={44} priority /></span><div><strong>El Buen Taco</strong><small>Seguimiento de pedido</small></div><span className="tracking-live"><i /> En vivo</span></header>
 
       <section className="tracking-content">
         <div className="tracking-order-heading">

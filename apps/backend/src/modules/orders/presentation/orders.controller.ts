@@ -4,6 +4,7 @@ import { CreateOrderDto } from '../application/dto/create-order.dto';
 import { UpdateOrderStatusDto } from '../application/dto/update-order-status.dto';
 import { OrdersService } from '../application/orders.service';
 import { OrderStatus } from '../domain/enums/order-status.enum';
+import { Public } from '../../auth/public.decorator';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -34,12 +35,13 @@ export class OrdersController {
 }
 
 @ApiTags('tracking')
+@Public()
 @Controller('tracking')
 export class TrackingController {
   constructor(private readonly orders: OrdersService) {}
 
   @Get(':publicToken')
   @ApiOperation({ summary: 'Consulta publica y limitada para el QR del ticket' })
-  @ApiParam({ name: 'publicToken', example: 'ET-A1B2C3D4' })
+  @ApiParam({ name: 'publicToken', example: 'EBT-A1B2C3D4' })
   find(@Param('publicToken') publicToken: string) { return this.orders.findTracking(publicToken); }
 }

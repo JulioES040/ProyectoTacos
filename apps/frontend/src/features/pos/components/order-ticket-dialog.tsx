@@ -7,6 +7,7 @@ import {
   FiX as X,
 } from 'react-icons/fi';
 import { QRCodeSVG } from 'qrcode.react';
+import Image from 'next/image';
 import { useEffect, useRef } from 'react';
 
 export type TicketLine = {
@@ -15,6 +16,7 @@ export type TicketLine = {
   description: string;
   price: number;
   quantity: number;
+  extras: Array<{ id: string; name: string; price: number }>;
 };
 
 export type OrderTicket = {
@@ -86,7 +88,7 @@ export function OrderTicketDialog({ ticket, onClose, onNewOrder }: OrderTicketDi
         </header>
 
         <div className="ticket-paper">
-          <div className="ticket-brand"><strong>El Taquero</strong><span>Punto de venta</span></div>
+          <div className="ticket-brand"><div><Image src="/brands/el-buen-taco-logo.png" alt="Logo El Buen Taco" width={44} height={44} /><strong>El Buen Taco</strong></div><span>Punto de venta</span></div>
           <section className="ticket-identity" aria-label="Datos de la orden">
             <div><span>Orden</span><strong>#{ticket.orderNumber}</strong></div>
             <span className="ticket-paid"><CheckCircle2 size={20} /> Pago registrado</span>
@@ -104,7 +106,7 @@ export function OrderTicketDialog({ ticket, onClose, onNewOrder }: OrderTicketDi
               <div className="ticket-product" key={line.id}>
                 <strong className="ticket-quantity">{line.quantity}x</strong>
                 <div><strong>{line.name}</strong><span>{line.description} · {money(line.price)} c/u</span></div>
-                <strong>{money(line.price * line.quantity)}</strong>
+                <strong>{money((line.price + line.extras.reduce((total, extra) => total + extra.price, 0)) * line.quantity)}</strong>
               </div>
             ))}
           </section>

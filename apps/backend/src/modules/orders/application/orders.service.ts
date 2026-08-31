@@ -7,6 +7,11 @@ import { OrderRepository } from '../domain/repositories/order.repository';
 import { OrderStateService } from '../domain/services/order-state.service';
 import { OrdersGateway } from '../presentation/orders.gateway';
 
+const orderExtras = [
+  { id: 'cheese', name: 'Queso extra', price: 5 },
+  { id: 'avocado', name: 'Aguacate', price: 7 },
+] as const;
+
 @Injectable()
 export class OrdersService {
   constructor(private readonly repository: OrderRepository, private readonly state: OrderStateService, private readonly gateway: OrdersGateway, private readonly products: ProductsService) {}
@@ -18,9 +23,15 @@ export class OrdersService {
     const lines: OrderLine[] = dto.items.map((item) => {
       const product = this.products.findOne(item.productId);
       if (!product.available) throw new BadRequestException(`${product.name} is not available`);
-      return { id: product.id, productId: product.id, name: product.name, description: product.description, quantity: item.quantity, unitPrice: product.price };
+      const extras = (item.extras ?? []).map((extraId) => {
+        const extra = orderExtras.find((candidate) => candidate.id === extraId);
+        if (!extra) throw new BadRequestException(`Extra ${extraId} is not available`);
+        return { ...extra };
+      });
+      if (new Set(extras.map((extra) => extra.id)).size !== extras.length) throw new BadRequestException('An extra can only be added once per line');
+      return { id: product.id, productId: product.id, name: product.name, description: product.description, quantity: item.quantity, unitPrice: product.price, extras };
     });
-    const total = lines.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+    const total = lines.reduce((sum, item) => sum + (item.unitPrice + item.extras.reduce((extrasTotal, extra) => extrasTotal + extra.price, 0)) * item.quantity, 0);
     const order = new Order(this.repository.nextOrderNumber(), dto.customer.trim(), dto.orderType, lines, total);
     this.transition(order, OrderStatus.PAID);
     this.transition(order, OrderStatus.QUEUED);

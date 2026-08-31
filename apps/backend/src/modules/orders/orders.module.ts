@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ProductsModule } from '../products/products.module';
+import { AuthModule } from '../auth/auth.module';
 import { OrdersService } from './application/orders.service';
 import { OrderRepository } from './domain/repositories/order.repository';
 import { OrderStateService } from './domain/services/order-state.service';
@@ -8,7 +9,7 @@ import { OrdersController, TrackingController } from './presentation/orders.cont
 import { OrdersGateway } from './presentation/orders.gateway';
 
 @Module({
-  imports: [ProductsModule],
+  imports: [ProductsModule, AuthModule],
   controllers: [OrdersController, TrackingController],
   providers: [
     OrdersService,

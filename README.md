@@ -1,4 +1,4 @@
-# Tacos Platform
+# El Buen Taco
 
 Monorepo para POS, cocina, seguimiento de pedidos y reportes.
 

@@ -2,7 +2,8 @@ import { io, Socket } from 'socket.io-client';
 import { api } from '@/lib/api';
 
 export type KitchenOrderStatus = 'QUEUED' | 'PREPARING' | 'READY' | 'DELIVERED';
-export type KitchenOrderLine = { id: string; productId: string; name: string; description: string; quantity: number; unitPrice: number };
+export type KitchenOrderExtra = { id: string; name: string; price: number };
+export type KitchenOrderLine = { id: string; productId: string; name: string; description: string; quantity: number; unitPrice: number; extras: KitchenOrderExtra[] };
 export type KitchenOrder = {
   id: string;
   orderNumber: string;
@@ -20,7 +21,7 @@ export type TrackingOrder = Pick<KitchenOrder, 'orderNumber' | 'publicToken' | '
 export type CreateOrderInput = {
   customer: string;
   orderType: KitchenOrder['orderType'];
-  items: Array<{ productId: string; quantity: number }>;
+  items: Array<{ productId: string; quantity: number; extras?: string[] }>;
 };
 
 let ordersSocket: Socket | undefined;
@@ -28,7 +29,7 @@ let ordersSocket: Socket | undefined;
 function getSocket() {
   if (!ordersSocket) {
     const baseUrl = process.env.NEXT_PUBLIC_SOCKET_URL ?? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api').replace(/\/api\/?$/, '');
-    ordersSocket = io(`${baseUrl}/orders`, { transports: ['websocket', 'polling'] });
+    ordersSocket = io(`${baseUrl}/orders`, { transports: ['websocket', 'polling'], withCredentials: true });
   }
   return ordersSocket;
 }

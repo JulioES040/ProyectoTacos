@@ -11,9 +11,9 @@ import {
   FiSettings as Settings,
   FiShoppingBag as ShoppingBag,
   FiTrash2 as Trash2,
-  FiZap as Flame,
 } from 'react-icons/fi';
-import { GiCheeseWedge, GiKnifeFork, GiTacos, GiWaterBottle } from 'react-icons/gi';
+import { GiAvocado, GiCheeseWedge, GiKnifeFork, GiSodaCan, GiTacos, GiWaterBottle } from 'react-icons/gi';
+import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createKitchenOrder } from '@/features/kitchen/services/kitchen-queue';
 import { readProducts, subscribeToProducts } from '@/features/menu/services/menu-api';
@@ -48,14 +48,24 @@ const initialProducts: Product[] = [
   { id: 'agua', name: 'Agua fresca', description: 'Jamaica, horchata o limon', price: 18, category: 'Bebidas', icon: '🥤' },
 ];
 
-type Cart = Record<string, number>;
+type Extra = { id: string; name: string; price: number };
+type Cart = Record<string, { quantity: number; extraIds: string[] }>;
 const money = (value: number) => `Q${value.toFixed(2)}`;
+const extras: Extra[] = [
+  { id: 'cheese', name: 'Queso', price: 5 },
+  { id: 'avocado', name: 'Aguacate', price: 7 },
+];
 
 function ProductVisual({ category }: { category: string }) {
   if (category.startsWith('Tacos')) return <GiTacos size={28} />;
   if (category.startsWith('Gringas')) return <span className="tortilla-icon" aria-hidden="true" />;
+  if (category === 'Gaseosa') return <GiSodaCan size={27} />;
   if (category === 'Bebidas') return <GiWaterBottle size={27} />;
   return <GiCheeseWedge size={26} />;
+}
+
+function supportsExtras(category: string) {
+  return category.startsWith('Tacos') || category.startsWith('Gringas');
 }
 
 export function PosWorkspace() {
@@ -90,20 +100,35 @@ export function PosWorkspace() {
     return matchCategory && terms.includes(query.toLowerCase().trim());
   }), [activeCategory, query]);
 
-  const cartLines = products.flatMap((product) => cart[product.id] ? [{ product, quantity: cart[product.id] }] : []);
-  const subtotal = cartLines.reduce((total, line) => total + line.product.price * line.quantity, 0);
+  const cartLines = products.flatMap((product) => {
+    const line = cart[product.id];
+    return line ? [{ product, ...line, extras: supportsExtras(product.category) ? extras.filter((extra) => line.extraIds.includes(extra.id)) : [] }] : [];
+  });
+  const subtotal = cartLines.reduce((total, line) => total + (line.product.price + line.extras.reduce((extrasTotal, extra) => extrasTotal + extra.price, 0)) * line.quantity, 0);
 
   const changeQuantity = (productId: string, amount: number) => {
     setTicket(null);
     setChargeError('');
     idempotencyKey.current = null;
     setCart((current) => {
-      const nextQuantity = (current[productId] ?? 0) + amount;
+      const nextQuantity = (current[productId]?.quantity ?? 0) + amount;
       if (nextQuantity <= 0) {
         const { [productId]: _, ...rest } = current;
         return rest;
       }
-      return { ...current, [productId]: nextQuantity };
+      return { ...current, [productId]: { quantity: nextQuantity, extraIds: current[productId]?.extraIds ?? [] } };
+    });
+  };
+
+  const toggleExtra = (productId: string, extraId: string) => {
+    setTicket(null);
+    setChargeError('');
+    idempotencyKey.current = null;
+    setCart((current) => {
+      const line = current[productId];
+      if (!line) return current;
+      const extraIds = line.extraIds.includes(extraId) ? line.extraIds.filter((id) => id !== extraId) : [...line.extraIds, extraId];
+      return { ...current, [productId]: { ...line, extraIds } };
     });
   };
 
@@ -126,7 +151,7 @@ export function PosWorkspace() {
       const order = await createKitchenOrder({
         customer: customer.trim() || 'Cliente mostrador',
         orderType,
-        items: cartLines.map(({ product, quantity }) => ({ productId: product.id, quantity })),
+        items: cartLines.map(({ product, quantity, extraIds }) => ({ productId: product.id, quantity, ...(supportsExtras(product.category) && extraIds.length > 0 ? { extras: extraIds } : {}) })),
       }, idempotencyKey.current);
       const currentTicket: OrderTicket = {
         orderNumber: order.orderNumber,
@@ -134,7 +159,7 @@ export function PosWorkspace() {
         customer: order.customer,
         orderType: order.orderType,
         createdAt: order.createdAt,
-        lines: order.lines.map((line) => ({ id: line.id, name: line.name, description: line.description, price: line.unitPrice, quantity: line.quantity })),
+        lines: order.lines.map((line) => ({ id: line.id, name: line.name, description: [line.description, line.extras.length > 0 ? `Extras: ${line.extras.map((extra) => extra.name).join(', ')}` : ''].filter(Boolean).join(' - '), price: line.unitPrice, quantity: line.quantity, extras: line.extras })),
         total: order.total,
         trackingUrl: new URL(`/track/${order.publicToken}`, process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin).toString(),
       };
@@ -156,7 +181,7 @@ export function PosWorkspace() {
     <main className="pos-shell">
       <AppSidebar />
       <header className="pos-header">
-        <div className="pos-context"><span className="brand-mark"><Flame size={21} /></span><span><strong>El Taquero</strong><small>Punto de venta</small></span></div>
+        <div className="pos-context"><span className="brand-mark"><Image src="/brands/el-buen-taco-logo.png" alt="" width={40} height={40} priority /></span><span><strong>El Buen Taco</strong><small>Punto de venta</small></span></div>
         <label className="product-search">
           <Search size={19} aria-hidden="true" />
           <span className="sr-only">Buscar producto</span>
@@ -197,7 +222,7 @@ export function PosWorkspace() {
             <button type="button" className={orderType === 'takeaway' ? 'selected' : ''} onClick={() => { setOrderType('takeaway'); setTicket(null); setChargeError(''); idempotencyKey.current = null; }}><ShoppingBag size={17} /> Para llevar</button>
           </div>
           <div className="order-lines">
-            {cartLines.length === 0 ? <div className="empty-order"><GiTacos size={42} aria-hidden="true" /><h2>Selecciona productos</h2><p>para comenzar la orden</p></div> : cartLines.map(({ product, quantity }) => <div className="order-line" key={product.id}><div><strong>{product.name}</strong><small>{money(product.price)} c/u</small></div><div className="line-controls"><button type="button" title={`Restar ${product.name}`} aria-label={`Restar ${product.name}`} onClick={() => changeQuantity(product.id, -1)}><Minus size={15} /></button><span>{quantity}</span><button type="button" title={`Sumar ${product.name}`} aria-label={`Sumar ${product.name}`} onClick={() => changeQuantity(product.id, 1)}><Plus size={15} /></button></div><strong>{money(product.price * quantity)}</strong></div>)}
+            {cartLines.length === 0 ? <div className="empty-order"><GiTacos size={42} aria-hidden="true" /><h2>Selecciona productos</h2><p>para comenzar la orden</p></div> : cartLines.map(({ product, quantity, extras: selectedExtras }) => <div className="order-line" key={product.id}><div className="order-line-copy"><strong>{product.name}</strong><small>{money(product.price)} c/u</small></div><div className="line-controls"><button type="button" title={`Restar ${product.name}`} aria-label={`Restar ${product.name}`} onClick={() => changeQuantity(product.id, -1)}><Minus size={15} /></button><span>{quantity}</span><button type="button" title={`Sumar ${product.name}`} aria-label={`Sumar ${product.name}`} onClick={() => changeQuantity(product.id, 1)}><Plus size={15} /></button></div><strong className="line-total">{money((product.price + selectedExtras.reduce((total, extra) => total + extra.price, 0)) * quantity)}</strong>{supportsExtras(product.category) && <div className="line-extras" role="group" aria-label={`Extras para ${product.name}`}><span>Extras</span>{extras.map((extra) => <button key={extra.id} type="button" className={selectedExtras.some((selected) => selected.id === extra.id) ? 'selected' : ''} onClick={() => toggleExtra(product.id, extra.id)} aria-pressed={selectedExtras.some((selected) => selected.id === extra.id)}>{extra.id === 'cheese' ? <GiCheeseWedge size={14} aria-hidden="true" /> : <GiAvocado size={14} aria-hidden="true" />}<b>{extra.name}</b><small>+{money(extra.price)}</small></button>)}</div>}</div>)}
           </div>
           <div className="order-summary"><div><span>Subtotal</span><strong>{money(subtotal)}</strong></div><div><span>Descuento</span><strong className="discount">-</strong></div><div className="total"><span>Total</span><strong>{money(subtotal)}</strong></div></div>
           <div className="order-actions">{chargeError && <p className="charge-error" role="alert">{chargeError}</p>}<button className="charge-button" type="button" disabled={subtotal === 0 || isCharging} onClick={chargeOrder}>{isCharging ? 'Registrando...' : `Cobrar ${money(subtotal)}`}</button><div><button type="button" disabled={subtotal === 0}><Save size={16} /> Guardar orden</button><button type="button" className="cancel-button" disabled={subtotal === 0 || isCharging} onClick={cancelOrder}><Trash2 size={16} /> Cancelar</button></div></div>

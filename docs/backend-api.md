@@ -24,6 +24,10 @@ Una orden tambien puede cancelarse desde `CREATED`, `PAID` o `QUEUED`. El endpoi
 
 ## Endpoints
 
+### Sesion administrativa
+
+`POST /api/auth/login` recibe `email` y `password`, valida las credenciales de administrador y crea una cookie HTTP-only firmada por ocho horas. `GET /api/auth/session` verifica la sesion y `POST /api/auth/logout` la elimina. Los endpoints operativos de productos y ordenes requieren esa cookie; el seguimiento del QR permanece publico.
+
 ### Salud
 
 `GET /api/health`
@@ -43,13 +47,14 @@ Header recomendado: `Idempotency-Key: <uuid>`. Repetir la solicitud con la misma
   "items": [
     {
       "productId": "pastor",
-      "quantity": 2
+      "quantity": 2,
+      "extras": ["cheese", "avocado"]
     }
   ]
 }
 ```
 
-El servidor obtiene nombre, descripcion y precio desde su catalogo, calcula `total`, genera `id`, `orderNumber` y `publicToken`, registra internamente pago y encola la orden. Los productos agotados no pueden agregarse a una orden.
+El servidor obtiene nombre, descripcion y precio desde su catalogo, calcula `total`, genera `id`, `orderNumber` y `publicToken`, registra internamente pago y encola la orden. Cada linea puede recibir los extras `cheese` (Q5) y `avocado` (Q7), que se aplican a cada unidad y se incluyen en el ticket y la vista de cocina. Los productos agotados no pueden agregarse a una orden.
 
 ### Administrar el menu
 
@@ -91,7 +96,7 @@ Conexion: `http://localhost:3001/orders`.
 
 - `order.created`: nueva orden disponible para cocina y caja.
 - `order.status.updated`: orden interna actualizada para cocina y caja.
-- `order.track` (cliente a servidor): `{ "publicToken": "ET-A1B2C3D4" }` suscribe la pantalla publica a una orden.
+- `order.track` (cliente a servidor): `{ "publicToken": "EBT-A1B2C3D4" }` suscribe la pantalla publica a una orden.
 - `tracking.status.updated`: estado publico limitado, emitido solo a la sala del token suscrito.
 
 REST sigue siendo la fuente de verdad. Los eventos indican a las interfaces que deben actualizarse o entregan el nuevo estado publico.
