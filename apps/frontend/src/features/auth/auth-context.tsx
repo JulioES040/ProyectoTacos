@@ -1,29 +1,67 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { api } from '@/lib/api';
 
-type AuthContextValue = { authenticated: boolean; loading: boolean; refresh: () => Promise<boolean>; logout: () => Promise<void> };
+export type AppRole = 'CASHIER' | 'KITCHEN';
+export type AuthUser = { sub: string; username: string; role: AppRole };
+type AuthContextValue = { user: AuthUser | null; authenticated: boolean; loading: boolean; refresh: () => Promise<AuthUser | null>; logout: () => Promise<void>; loginDemo: (username: string, password: string) => AuthUser | null };
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const STORAGE_KEY = 'demo_session';
+
+// ─── Credenciales de demo (sin backend) ───────────────────────────────────────
+const DEMO_USERS: { username: string; password: string; role: AppRole }[] = [
+  { username: 'cajero',  password: 'admin123', role: 'CASHIER' },
+  { username: 'cocina',  password: 'admin123', role: 'KITCHEN' },
+];
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [authenticated, setAuthenticated] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = async () => {
-    try { await api('/auth/session'); setAuthenticated(true); return true; }
-    catch { setAuthenticated(false); return false; }
-    finally { setLoading(false); }
+  const loginDemo = (username: string, password: string): AuthUser | null => {
+    const found = DEMO_USERS.find(
+      (u) => u.username === username.trim().toLowerCase() && u.password === password,
+    );
+    if (!found) return null;
+    const session: AuthUser = { sub: found.username, username: found.username, role: found.role };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    setUser(session);
+    return session;
+  };
+
+  const refresh = async (): Promise<AuthUser | null> => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const session: AuthUser = JSON.parse(stored) as AuthUser;
+        setUser(session);
+        return session;
+      }
+      setUser(null);
+      return null;
+    } catch {
+      setUser(null);
+      return null;
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { void refresh(); }, []);
 
   const value = useMemo(() => ({
-    authenticated,
+    user,
+    authenticated: Boolean(user),
     loading,
     refresh,
-    logout: async () => { await api('/auth/logout', { method: 'POST' }); setAuthenticated(false); },
-  }), [authenticated, loading]);
+    loginDemo,
+    logout: async () => {
+      localStorage.removeItem(STORAGE_KEY);
+      setUser(null);
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [user, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
