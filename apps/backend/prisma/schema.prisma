@@ -7,6 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  CASHIER
+  KITCHEN
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+}
+
 enum OrderStatus {
   CREATED
   PAID
@@ -17,10 +27,105 @@ enum OrderStatus {
   CANCELLED
 }
 
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  username     String    @unique @db.VarChar(50)
+  passwordHash String    @db.VarChar(255)
+  role         UserRole
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  orders       Order[]
+
+  @@index([role, active], map: "idx_users_role_active")
+}
+
+model Product {
+  id             String      @id @db.VarChar(64)
+  name           String      @db.VarChar(80)
+  nameNormalized String      @unique @db.VarChar(80)
+  description    String      @db.VarChar(160)
+  price          Decimal     @db.Decimal(10, 2)
+  category       String      @db.VarChar(60)
+  available      Boolean     @default(true)
+  deletedAt      DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  orderItems     OrderItem[]
+
+  @@index([deletedAt, available, category], map: "idx_products_catalog")
+  @@index([category, name], map: "idx_products_category_name")
+}
+
+model Extra {
+  id         String           @id @db.VarChar(40)
+  name       String           @db.VarChar(60)
+  price      Decimal          @db.Decimal(10, 2)
+  available  Boolean          @default(true)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  itemExtras OrderItemExtra[]
+
+  @@index([available], map: "idx_extras_available")
+}
+
 model Order {
-  id          String      @id @default(cuid())
-  publicToken String      @unique
-  status      OrderStatus @default(CREATED)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id             String               @id @default(uuid()) @db.Uuid
+  orderNumber    Int                  @unique
+  publicToken    String               @unique @db.VarChar(32)
+  customer       String               @db.VarChar(100)
+  orderType      OrderType
+  status         OrderStatus          @default(CREATED)
+  total          Decimal              @db.Decimal(12, 2)
+  idempotencyKey String?              @unique @db.VarChar(100)
+  createdById    String               @db.Uuid
+  createdBy      User                 @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  items          OrderItem[]
+  statusHistory  OrderStatusHistory[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([status, createdAt], map: "idx_orders_status_fifo")
+  @@index([createdAt(sort: Desc)], map: "idx_orders_recent")
+  @@index([createdById, createdAt(sort: Desc)], map: "idx_orders_cashier_recent")
+}
+
+model OrderItem {
+  id                  String           @id @default(uuid()) @db.Uuid
+  orderId             String           @db.Uuid
+  productId           String           @db.VarChar(64)
+  productName         String           @db.VarChar(80)
+  productDescription  String           @db.VarChar(160)
+  quantity            Int
+  unitPrice           Decimal          @db.Decimal(10, 2)
+  order               Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product             Product          @relation(fields: [productId], references: [id], onDelete: Restrict)
+  extras              OrderItemExtra[]
+
+  @@index([orderId], map: "idx_order_items_order")
+  @@index([productId], map: "idx_order_items_product")
+}
+
+model OrderItemExtra {
+  id        String    @id @default(uuid()) @db.Uuid
+  orderItemId String  @db.Uuid
+  extraId   String    @db.VarChar(40)
+  name      String    @db.VarChar(60)
+  price     Decimal   @db.Decimal(10, 2)
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  extra     Extra     @relation(fields: [extraId], references: [id], onDelete: Restrict)
+
+  @@unique([orderItemId, extraId], map: "uq_order_item_extra")
+  @@index([extraId], map: "idx_order_item_extras_extra")
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(uuid()) @db.Uuid
+  orderId   String      @db.Uuid
+  status    OrderStatus
+  changedAt DateTime    @default(now())
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, changedAt], map: "idx_order_status_history")
 }

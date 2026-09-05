@@ -1,27 +1,38 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { createHmac, timingSafeEqual } from 'crypto';
+import { JwtService } from '@nestjs/jwt';
+import { UserRole } from '@prisma/client';
+import { PrismaService } from '../../database/prisma/prisma.service';
+import { verifyPassword } from './password';
 
-type Session = { email: string; exp: number };
+export type Session = { sub: string; username: string; role: UserRole; exp: number };
+export const jwtIssuer = 'el-buen-taco-api';
+export const jwtAudience = 'el-buen-taco-pos';
+export const sessionCookieName = () => process.env.NODE_ENV === 'production' ? '__Host-ebt_session' : 'ebt_session';
+
+export function sessionSecret(secret = process.env.SESSION_SECRET) {
+  if (process.env.NODE_ENV === 'production' && (!secret || secret.length < 32)) throw new Error('SESSION_SECRET must contain at least 32 characters in production');
+  return secret ?? 'local-development-secret-change-before-production';
+}
 
 @Injectable()
 export class AuthService {
-  private readonly secret = process.env.SESSION_SECRET ?? 'local-development-secret-change-before-production';
+  constructor(private readonly jwt: JwtService, private readonly prisma: PrismaService) {}
 
-  login(email: string, password: string) {
-    const expectedEmail = process.env.ADMIN_EMAIL ?? 'admin@elbuentaco.local';
-    const expectedPassword = process.env.ADMIN_PASSWORD ?? 'cambia-esta-clave';
-    if (!this.matches(email, expectedEmail) || !this.matches(password, expectedPassword)) throw new UnauthorizedException('Credenciales invalidas');
-    return this.sign({ email: expectedEmail, exp: Date.now() + 8 * 60 * 60 * 1000 });
+  async login(username: string, password: string) {
+    const normalized = username.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { username: normalized } });
+    if (!user?.active || !verifyPassword(password, user.passwordHash)) throw new UnauthorizedException('Credenciales invalidas');
+    await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    const session = { sub: user.id, username: user.username, role: user.role };
+    return { token: this.jwt.sign(session, { issuer: jwtIssuer, audience: jwtAudience }), user: session };
   }
 
   readSession(cookie?: string) {
-    const token = cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith('ebt_session='))?.slice('ebt_session='.length);
+    const cookieName = sessionCookieName();
+    const token = cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${cookieName}=`))?.slice(cookieName.length + 1);
     if (!token) return null;
-    const [encoded, signature] = token.split('.');
-    if (!encoded || !signature || !this.matches(signature, this.signature(encoded))) return null;
     try {
-      const session = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')) as Session;
-      return session.exp > Date.now() ? session : null;
+      return this.jwt.verify<Session>(token, { issuer: jwtIssuer, audience: jwtAudience });
     } catch { return null; }
   }
 
@@ -30,16 +41,4 @@ export class AuthService {
     return { httpOnly: true, secure, sameSite: secure ? 'none' as const : 'lax' as const, maxAge: 8 * 60 * 60 * 1000, path: '/' };
   }
 
-  private sign(session: Session) {
-    const encoded = Buffer.from(JSON.stringify(session)).toString('base64url');
-    return `${encoded}.${this.signature(encoded)}`;
-  }
-
-  private signature(value: string) { return createHmac('sha256', this.secret).update(value).digest('base64url'); }
-
-  private matches(value: string, expected: string) {
-    const left = Buffer.from(value);
-    const right = Buffer.from(expected);
-    return left.length === right.length && timingSafeEqual(left, right);
-  }
 }

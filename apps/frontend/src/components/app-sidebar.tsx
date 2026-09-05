@@ -19,18 +19,18 @@ const navigation = [
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const endSession = async () => { await logout(); router.replace('/login'); };
 
   return (
     <aside className="app-sidebar">
-      <Link className="sidebar-brand" href="/pos" aria-label="El Buen Taco">
+      <Link className="sidebar-brand" href={user?.role === 'KITCHEN' ? '/kitchen' : '/pos'} aria-label="El Buen Taco">
         <Image src="/brands/el-buen-taco-logo.png" alt="El Buen Taco" width={54} height={54} priority />
         <span>EBT</span>
       </Link>
       <nav aria-label="Navegacion principal">
-        {navigation.map(({ href, label, description, icon: Icon }) => {
+        {navigation.filter(({ href }) => user?.role !== 'KITCHEN' || href === '/kitchen').map(({ href, label, description, icon: Icon }) => {
           const active = pathname.startsWith(href);
           return <Link key={href} href={href} className={active ? 'active' : ''} aria-current={active ? 'page' : undefined} title={description}>
             <Icon size={23} aria-hidden="true" />

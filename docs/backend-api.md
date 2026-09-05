@@ -4,7 +4,7 @@
 
 El backend es un monolito modular en NestJS 11. La primera implementacion cubre el cobro del POS, la cola FIFO de cocina, la entrega y el seguimiento publico del QR.
 
-No hay base de datos en esta etapa. `InMemoryOrderRepository` conserva las ordenes mientras el proceso esta activo y las pierde al reiniciarse. La interfaz `OrderRepository` permite sustituirlo posteriormente por Prisma sin cambiar controladores ni casos de uso.
+La persistencia utiliza PostgreSQL mediante Prisma. Las ordenes, sus articulos, extras, historial de estados, usuarios y catalogo sobreviven a reinicios del backend.
 
 ## Tecnologias
 
@@ -12,7 +12,7 @@ No hay base de datos en esta etapa. `InMemoryOrderRepository` conserva las orden
 - `class-validator` y `class-transformer` para validar entradas.
 - Swagger/OpenAPI en `/docs`.
 - Socket.IO, namespace `/orders`, para sincronizacion en tiempo real.
-- Repositorio `Map` en memoria como persistencia temporal.
+- PostgreSQL y Prisma para persistencia, migraciones e indices.
 
 URL local base: `http://localhost:3001/api`.
 
@@ -26,13 +26,13 @@ Una orden tambien puede cancelarse desde `CREATED`, `PAID` o `QUEUED`. El endpoi
 
 ### Sesion administrativa
 
-`POST /api/auth/login` recibe `email` y `password`, valida las credenciales de administrador y crea una cookie HTTP-only firmada por ocho horas. `GET /api/auth/session` verifica la sesion y `POST /api/auth/logout` la elimina. Los endpoints operativos de productos y ordenes requieren esa cookie; el seguimiento del QR permanece publico.
+`POST /api/auth/login` recibe `username` y `password`, valida un hash `scrypt` almacenado en PostgreSQL y crea una cookie HTTP-only con un JWT HS256 que expira en ocho horas. El token valida firma, emisor y audiencia. `GET /api/auth/session` verifica la sesion y `POST /api/auth/logout` la elimina. El rol `CASHIER` puede operar todo el sistema; `KITCHEN` solo consulta la cola y cambia estados. El seguimiento del QR permanece publico.
 
 ### Salud
 
 `GET /api/health`
 
-Confirma que la API responde e indica que el almacenamiento activo es `memory`.
+Comprueba la conexion con PostgreSQL e indica `storage: postgresql`.
 
 ### Crear y cobrar una orden
 
@@ -104,6 +104,9 @@ REST sigue siendo la fuente de verdad. Los eventos indican a las interfaces que 
 ## Variables de entorno
 
 - `PORT`: puerto HTTP del backend; predeterminado `3001`.
+- `DATABASE_URL`: conexion PostgreSQL utilizada por Prisma.
+- `SESSION_SECRET`: secreto para firmar JWT; en produccion debe contener al menos 32 caracteres aleatorios.
+- `SEED_CASHIER_PASSWORD` y `SEED_KITCHEN_PASSWORD`: contrasenas creadas o rotadas por el seed.
 - `FRONTEND_ORIGIN`: origen CORS permitido. Acepta varios valores separados por coma.
 - `NEXT_PUBLIC_API_URL`: URL `/api` consumida por Next.js.
 - `NEXT_PUBLIC_SOCKET_URL`: origen de Socket.IO sin `/api`.
@@ -113,10 +116,8 @@ Para probar desde otras tablets de la misma red, estas tres variables publicas d
 
 ## Limitaciones deliberadas
 
-- Sin autenticacion ni roles todavía.
 - Sin integracion real con terminal de pago.
-- Sin persistencia, migraciones o respaldo.
-- El catalogo esta en memoria y vuelve a sus valores iniciales al reiniciar.
-- El contador de orden vuelve a `5608` al reiniciar.
+- El despliegue debe configurar respaldo y monitoreo de PostgreSQL.
+- Para produccion deben reemplazarse todos los secretos y contrasenas de desarrollo.
 
 Estas limitaciones deben resolverse antes de un despliegue productivo.

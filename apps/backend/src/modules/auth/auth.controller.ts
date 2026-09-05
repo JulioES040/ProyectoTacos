@@ -1,11 +1,11 @@
-import { Body, Controller, Get, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength } from 'class-validator';
-import { AuthService } from './auth.service';
+import { IsString, MaxLength, MinLength } from 'class-validator';
+import { AuthService, Session, sessionCookieName } from './auth.service';
 import { Public } from './public.decorator';
 
 class LoginDto {
-  @IsEmail() email!: string;
+  @IsString() @MinLength(3) @MaxLength(50) username!: string;
   @IsString() @MinLength(8) password!: string;
 }
 
@@ -17,19 +17,20 @@ export class AuthController {
   @Post('login')
   @Public()
   @ApiOperation({ summary: 'Inicia una sesion administrativa mediante cookie HTTP-only' })
-  login(@Body() body: LoginDto, @Res({ passthrough: true }) response: { cookie: (name: string, value: string, options: object) => void }) {
-    response.cookie('ebt_session', this.auth.login(body.email, body.password), this.auth.cookieOptions());
-    return { email: body.email };
+  async login(@Body() body: LoginDto, @Res({ passthrough: true }) response: { cookie: (name: string, value: string, options: object) => void }) {
+    const result = await this.auth.login(body.username, body.password);
+    response.cookie(sessionCookieName(), result.token, this.auth.cookieOptions());
+    return result.user;
   }
 
   @Get('session')
   @ApiOperation({ summary: 'Verifica la sesion actual' })
-  session(@Res({ passthrough: true }) _response: unknown) { return { authenticated: true }; }
+  session(@Req() request: { user: Session }) { return { authenticated: true, ...request.user }; }
 
   @Post('logout')
   @ApiOperation({ summary: 'Cierra la sesion administrativa' })
   logout(@Res({ passthrough: true }) response: { clearCookie: (name: string, options: object) => void }) {
-    response.clearCookie('ebt_session', this.auth.cookieOptions());
+    response.clearCookie(sessionCookieName(), this.auth.cookieOptions());
     return { ok: true };
   }
 }

@@ -2,5 +2,5 @@ import { PosWorkspace } from '@/features/pos/components/pos-workspace';
 import { AuthGate } from '@/features/auth/auth-gate';
 
 export default function PosPage() {
-  return <AuthGate><PosWorkspace /></AuthGate>;
+  return <AuthGate roles={['CASHIER']}><PosWorkspace /></AuthGate>;
 }

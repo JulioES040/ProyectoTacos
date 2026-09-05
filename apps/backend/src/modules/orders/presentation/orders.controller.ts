@@ -1,12 +1,16 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CreateOrderDto } from '../application/dto/create-order.dto';
 import { UpdateOrderStatusDto } from '../application/dto/update-order-status.dto';
 import { OrdersService } from '../application/orders.service';
 import { OrderStatus } from '../domain/enums/order-status.enum';
 import { Public } from '../../auth/public.decorator';
+import { Roles } from '../../auth/roles.decorator';
+import { UserRole } from '@prisma/client';
+import { Session } from '../../auth/auth.service';
 
 @ApiTags('orders')
+@Roles(UserRole.CASHIER)
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly orders: OrdersService) {}
@@ -14,7 +18,7 @@ export class OrdersController {
   @Post()
   @ApiOperation({ summary: 'Cobra, crea y envia una orden a la cola FIFO' })
   @ApiHeader({ name: 'Idempotency-Key', required: false, description: 'Evita ordenes duplicadas si caja reintenta el cobro.' })
-  create(@Body() dto: CreateOrderDto, @Headers('idempotency-key') key?: string) { return this.orders.create(dto, key); }
+  create(@Body() dto: CreateOrderDto, @Req() request: { user: Session }, @Headers('idempotency-key') key?: string) { return this.orders.create(dto, request.user.sub, key); }
 
   @Get()
   @ApiOperation({ summary: 'Lista ordenes, opcionalmente por estado' })
@@ -22,6 +26,7 @@ export class OrdersController {
   findAll(@Query('status') status?: OrderStatus) { return this.orders.findAll(status); }
 
   @Get('kitchen')
+  @Roles(UserRole.CASHIER, UserRole.KITCHEN)
   @ApiOperation({ summary: 'Lista la cola activa de cocina en orden FIFO' })
   kitchen() { return this.orders.findKitchenQueue(); }
 
@@ -30,6 +35,7 @@ export class OrdersController {
   findOne(@Param('id') id: string) { return this.orders.findOne(id); }
 
   @Patch(':id/status')
+  @Roles(UserRole.CASHIER, UserRole.KITCHEN)
   @ApiOperation({ summary: 'Avanza el estado de una orden validando la transicion' })
   updateStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) { return this.orders.updateStatus(id, dto.status); }
 }

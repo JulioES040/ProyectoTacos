@@ -5,6 +5,7 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
   app.setGlobalPrefix('api');
   app.enableCors({ origin: process.env.FRONTEND_ORIGIN?.split(',').map((origin) => origin.trim()) ?? true, credentials: true });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }));
@@ -13,6 +14,7 @@ async function bootstrap() {
     .setTitle('El Buen Taco API')
     .setDescription('API del punto de venta, cola FIFO de cocina y seguimiento publico de pedidos.')
     .setVersion('0.1.0')
+    .addCookieAuth('ebt_session')
     .addTag('health', 'Estado del servicio')
     .addTag('orders', 'Creacion y operacion de pedidos')
     .addTag('products', 'Administracion del menu y catalogo del POS')
