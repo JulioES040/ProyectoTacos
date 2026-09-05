@@ -2,8 +2,11 @@ import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/commo
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateProductDto, UpdateProductDto } from './product.dto';
 import { ProductsService } from './products.service';
+import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '@prisma/client';
 
 @ApiTags('products')
+@Roles(UserRole.CASHIER)
 @Controller('products')
 export class ProductsController {
   constructor(private readonly products: ProductsService) {}

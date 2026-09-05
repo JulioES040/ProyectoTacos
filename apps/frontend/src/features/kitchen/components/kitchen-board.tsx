@@ -10,7 +10,7 @@ import {
   FiShoppingBag as ShoppingBag,
   FiZap as Flame,
 } from 'react-icons/fi';
-import { MdKitchen as ChefHat } from 'react-icons/md';
+import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
 import {
@@ -54,7 +54,7 @@ function OrderCard({ order, isNext, now }: { order: KitchenOrder; isNext: boolea
       {isNext && <div className="fifo-marker"><Flame size={17} /> Siguiente por preparar</div>}
 
       <div className="kitchen-items" aria-label={`${itemCount} productos en la orden`}>
-        {order.lines.map((line) => <div className="kitchen-item" key={line.id}><strong>{line.quantity}x</strong><div><h4>{line.name}</h4><p>{line.description}</p></div></div>)}
+        {order.lines.map((line) => <div className="kitchen-item" key={line.id}><strong>{line.quantity}x</strong><div><h4>{line.name}</h4><p>{line.description}</p>{line.extras.length > 0 && <p className="kitchen-item-extras">Extras: {line.extras.map((extra) => extra.name).join(', ')}</p>}</div></div>)}
       </div>
 
       <footer className="kitchen-card-footer">
@@ -104,7 +104,7 @@ export function KitchenBoard() {
     <main className="kitchen-shell">
       <AppSidebar />
       <header className="kitchen-header">
-        <div className="kitchen-brand"><span><ChefHat size={28} /></span><div><strong>El Taquero</strong><small>Panel de cocina</small></div></div>
+        <div className="kitchen-brand"><span><Image src="/brands/el-buen-taco-logo.png" alt="" width={48} height={48} priority /></span><div><strong>El Buen Taco</strong><small>Panel de cocina</small></div></div>
         <div className="kitchen-summary"><strong>{activeOrders.length} ordenes activas</strong><time><Clock3 size={19} /> {currentTime}</time></div>
       </header>
 

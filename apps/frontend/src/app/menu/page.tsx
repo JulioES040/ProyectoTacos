@@ -1,3 +1,4 @@
 import { MenuManagement } from '@/features/menu/components/menu-management';
+import { AuthGate } from '@/features/auth/auth-gate';
 
-export default function MenuPage() { return <MenuManagement />; }
+export default function MenuPage() { return <AuthGate roles={['CASHIER']}><MenuManagement /></AuthGate>; }

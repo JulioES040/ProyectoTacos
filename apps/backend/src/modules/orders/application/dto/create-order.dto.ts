@@ -1,10 +1,11 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsIn, IsInt, IsNotEmpty, IsString, Min, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsArray, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 
 export class CreateOrderLineDto {
   @ApiProperty({ example: 'pastor' }) @IsString() @IsNotEmpty() productId!: string;
   @ApiProperty({ example: 2, minimum: 1 }) @IsInt() @Min(1) quantity!: number;
+  @ApiPropertyOptional({ example: ['cheese', 'avocado'], type: [String], description: 'Extras aplicados a cada unidad de esta linea.' }) @IsOptional() @IsArray() @IsString({ each: true }) extras?: string[];
 }
 
 export class CreateOrderDto {

@@ -1,6 +1,7 @@
 'use client';
 
-import { FiCheck, FiCoffee, FiEdit2, FiPackage, FiPlus, FiRefreshCw, FiSearch, FiTrash2, FiX } from 'react-icons/fi';
+import { FiCheck, FiEdit2, FiPackage, FiPlus, FiRefreshCw, FiSearch, FiTrash2, FiX } from 'react-icons/fi';
+import Image from 'next/image';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { createProduct, deleteProduct, Product, ProductInput, readProducts, subscribeToProducts, updateProduct } from '../services/menu-api';
@@ -77,7 +78,7 @@ export function MenuManagement() {
   return <main className="menu-shell">
     <AppSidebar />
     <header className="menu-header">
-      <div><span className="menu-header-icon"><FiCoffee size={24} /></span><div><strong>Control de menu</strong><small>Catalogo del punto de venta</small></div></div>
+      <div><span className="menu-header-icon"><Image src="/brands/el-buen-taco-logo.png" alt="" width={48} height={48} priority /></span><div><strong>El Buen Taco</strong><small>Control de menu</small></div></div>
       <button type="button" onClick={startNew}><FiPlus size={20} /> Nuevo producto</button>
     </header>
 

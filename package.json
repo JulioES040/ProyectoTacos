@@ -4,13 +4,17 @@
   "version": "0.1.0",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev": "npm run frontend",
+    "dev": "concurrently --kill-others-on-fail --names BACKEND,FRONTEND --prefix-colors yellow,cyan \"npm:backend\" \"npm:frontend\"",
+    "setup": "docker compose up -d postgres && npm run db:generate --workspace=@tacos/backend && npm run db:migrate --workspace=@tacos/backend && npm run db:seed --workspace=@tacos/backend",
     "start": "npm run frontend:start",
     "frontend": "npm run dev --workspace=@tacos/frontend",
     "frontend:start": "npm run start --workspace=@tacos/frontend",
     "backend": "npm run start:dev --workspace=@tacos/backend",
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   },
   "engines": { "node": ">=22" }
 }

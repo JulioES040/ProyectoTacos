@@ -1,11 +1,18 @@
-import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { ConnectedSocket, MessageBody, OnGatewayConnection, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Order } from '../domain/entities/order.entity';
+import { AuthService } from '../../auth/auth.service';
 
-@WebSocketGateway({ cors: { origin: '*' }, namespace: '/orders' })
-export class OrdersGateway {
+@WebSocketGateway({ cors: { origin: process.env.FRONTEND_ORIGIN?.split(',').map((origin) => origin.trim()) ?? true, credentials: true }, namespace: '/orders' })
+export class OrdersGateway implements OnGatewayConnection {
+  constructor(private readonly auth: AuthService) {}
+
   @WebSocketServer()
   private server!: Server;
+
+  handleConnection(socket: Socket) {
+    if (this.auth.readSession(socket.handshake.headers.cookie)) socket.join('staff');
+  }
 
   @SubscribeMessage('order.track')
   trackOrder(@ConnectedSocket() socket: Socket, @MessageBody() body: { publicToken?: string }) {
@@ -14,11 +21,11 @@ export class OrdersGateway {
   }
 
   emitCreated(order: Order) {
-    this.server.emit('order.created', order);
+    this.server.to('staff').emit('order.created', order);
   }
 
   emitUpdated(order: Order) {
-    this.server.emit('order.status.updated', order);
+    this.server.to('staff').emit('order.status.updated', order);
     this.server.to(this.room(order.publicToken)).emit('tracking.status.updated', this.toTracking(order));
   }
 

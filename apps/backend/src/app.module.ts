@@ -9,11 +9,19 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { ProductsModule } from './modules/products/products.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthModule } from './modules/auth/auth.module';
+import { SessionGuard } from './modules/auth/session.guard';
+import { DatabaseModule } from './database/database.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   controllers: [HealthController],
   imports: [
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env', '../../.env'] }),
     EventEmitterModule.forRoot(),
+    DatabaseModule,
+    AuthModule,
     ProductsModule,
     CategoriesModule,
     OrdersModule,
@@ -23,5 +31,6 @@ import { TrackingModule } from './modules/tracking/tracking.module';
     TrackingModule,
     ReportsModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: SessionGuard }],
 })
 export class AppModule {}
